@@ -4,6 +4,7 @@ from typing import List, Tuple, Iterable, Optional
 from dataclasses import dataclass
 from itertools import combinations
 from math import sqrt
+import sys
 
 @dataclass
 class Point:
@@ -358,3 +359,60 @@ def check_group(planes: List[Plane]) -> List[Tuple[Plane, Plane]]:
             matches.append((plane1, plane2))
 
     return matches
+
+
+def main():
+
+    # Check if arguments contains '-2' flag, meaning print both directions of match.
+    # If not, print only one direction
+    print_both = False
+
+    only_first = True
+
+    if any([arg == '-2' for arg in sys.argv]):
+        print_both = True
+
+    if any([arg == "--all" or arg == "-a" for arg in sys.argv]):
+        only_first = False
+
+    # Read input from stdin, assume TSV
+    planes = []
+
+    for line in sys.stdin:
+        split_line =  [f.strip() for f in line.split('\t')]
+
+        if len(split_line) < 10:
+            continue
+
+        name = split_line[0]
+        p1 = Point(float(split_line[1]), float(split_line[2]), float(split_line[3]))
+        p2 = Point(float(split_line[4]), float(split_line[5]), float(split_line[6]))
+        p3 = Point(float(split_line[7]), float(split_line[8]), float(split_line[9]))
+
+        plane_eq = PlaneEq(p1, p2, p3)
+        planes.append(Plane(plane_eq, name))
+
+
+    # Group by plane equation
+    grouped = group_planes(planes)
+
+    # Check each group for matches
+    matches: list[Tuple[Plane, Plane]] = []
+    for group in grouped:
+        group_matches = check_group(group)
+
+        if not print_both:
+            matches.extend(check_group(group))
+        else:
+            matches.extend(group_matches)
+            matches.extend([(b, a) for a, b in group_matches])
+
+    # Print matches
+    for match in matches:
+        print(f'{match[0].name}\t{match[1].name}')
+
+    pass
+
+
+if __name__ == "__main__":
+    main()
