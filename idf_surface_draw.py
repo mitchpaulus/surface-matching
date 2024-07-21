@@ -24,7 +24,8 @@ def read_polygon_file(filelike, dimensions) -> dict[str, list[tuple[float, float
             parts = [p.strip() for p in line.split(",")]
         name = parts[0]
         coords = [float(x) for x in parts[1:]]
-        polygons[name] = [(coords[i], coords[i+1]) for i in range(0, len(coords), dimensions)]
+        # Negative is to flip the y-axis.
+        polygons[name] = [(coords[i], -coords[i+1]) for i in range(0, len(coords), dimensions)]
 
     return polygons
 
@@ -67,22 +68,24 @@ def find_centroid(polygon: list[tuple[float, float]]):
 
     #  return x, y
 
-def write_svg_file(polygons, svg_filename):
-    with open(svg_filename, 'w') as f:
-        viewbox = calculate_viewbox(polygons)
-        f.write('<?xml version="1.0" encoding="UTF-8" ?>\n')
-        f.write(f'<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1080" viewBox="{viewbox}">\n')
+def write_svg_file(polygons):
+    lines = []
+    viewbox = calculate_viewbox(polygons)
+    lines.append('<?xml version="1.0" encoding="UTF-8" ?>\n')
+    lines.append(f'<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1080" viewBox="{viewbox}">\n')
 
-        font_size = 1
+    font_size = 1
 
-        for name, polygon in polygons.items():
-            points_str = ' '.join([f'{x},{y}' for x, y in polygon])
-            f.write(f'  <polygon points="{points_str}" style="fill:none;stroke:black;stroke-width:0.1" />\n')
+    for name, polygon in polygons.items():
+        points_str = ' '.join([f'{x},{y}' for x, y in polygon])
+        lines.append(f'  <polygon points="{points_str}" style="fill:none;stroke:black;stroke-width:0.1" />\n')
 
-            centroid_x, centroid_y = find_centroid(polygon)
-            f.write(f'  <text text-anchor="middle" dominant-baseline="middle" x="{centroid_x}" y="{centroid_y}" font-family="Verdana" font-size="{font_size}" fill="black">{name}</text>\n')
+        centroid_x, centroid_y = find_centroid(polygon)
+        lines.append(f'  <text text-anchor="middle" dominant-baseline="middle" x="{centroid_x}" y="{centroid_y}" font-family="Verdana" font-size="{font_size}" fill="black">{name}</text>\n')
 
-        f.write('</svg>\n')
+    lines.append('</svg>\n')
+    return "".join(lines)
+
 
 def main():
     dimensions = 2
@@ -110,10 +113,12 @@ def main():
         raise ValueError("Should not be possible")
 
 
-    print(f'Found {len(polygons)} polygons')
-    print(polygons)
+    print(f'Found {len(polygons)} polygons', file=sys.stderr)
+    print(polygons, file=sys.stderr)
 
-    write_svg_file(polygons, 'polygons_with_labels.svg')
+    output = write_svg_file(polygons)
+    print(output)
+
 
 if __name__ == '__main__':
     main()
