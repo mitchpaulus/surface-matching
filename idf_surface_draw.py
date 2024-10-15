@@ -2,20 +2,39 @@
 
 import sys
 
+class Polygon:
+    def __init__(self, name: str, points: list[tuple[float, float]]) -> None:
+        self.name = name
+        self.points = points
+    def min_x(self):
+        return min(p[0] for p in self.points)
+    def min_y(self):
+        return min(p[1] for p in self.points)
+    def max_x(self):
+        return max(p[0] for p in self.points)
+    def max_y(self):
+        return max(p[1] for p in self.points)
+
+    def __str__(self):
+        return f'Polygon {self.name} ({len(self.points)})'
+
+    def __repr__(self):
+        return self.__str__()
+
 def calculate_viewbox(polygons):
-    min_x: float = min(p[0] for poly in polygons.values() for p in poly)
-    min_y: float = min(p[1] for poly in polygons.values() for p in poly)
-    max_x: float = max(p[0] for poly in polygons.values() for p in poly)
-    max_y: float = max(p[1] for poly in polygons.values() for p in poly)
+    min_x: float = min(p.min_x() for p in polygons)
+    min_y: float = min(p.min_y() for p in polygons)
+    max_x: float = max(p.max_x() for p in polygons)
+    max_y: float = max(p.max_y() for p in polygons)
     return f"{min_x} {min_y} {max_x - min_x} {max_y - min_y}"
 
-def read_polygon_file(filelike, dimensions) -> dict[str, list[tuple[float, float]]]:
+def read_polygon_file(filelike, dimensions) -> list[Polygon]:
     """Expects a file with lines like (3d):
     name1, x1, y1, x2, y2, x3, y3, ...
     or (2d):
     name1, x1, y1, x2, y2, ...
     """
-    polygons = {}
+    polygons = []
     #  with open(filename, 'r') as file:
     for line in filelike:
         if "\t" in line:
@@ -24,8 +43,9 @@ def read_polygon_file(filelike, dimensions) -> dict[str, list[tuple[float, float
             parts = [p.strip() for p in line.split(",")]
         name = parts[0]
         coords = [float(x) for x in parts[1:]]
-        # Negative is to flip the y-axis.
-        polygons[name] = [(coords[i], -coords[i+1]) for i in range(0, len(coords), dimensions)]
+
+        points = [(coords[i], -coords[i+1]) for i in range(0, len(coords), dimensions)]
+        polygons.append(Polygon(name, points))
 
     return polygons
 
@@ -68,7 +88,7 @@ def find_centroid(polygon: list[tuple[float, float]]):
 
     #  return x, y
 
-def write_svg_file(polygons):
+def write_svg_file(polygons: list[Polygon]) -> str:
     lines = []
     viewbox = calculate_viewbox(polygons)
     lines.append('<?xml version="1.0" encoding="UTF-8" ?>\n')
@@ -76,27 +96,37 @@ def write_svg_file(polygons):
 
     font_size = 1
 
-    for name, polygon in polygons.items():
-        points_str = ' '.join([f'{x},{y}' for x, y in polygon])
+    for p in polygons:
+        points_str = ' '.join([f'{x},{y}' for x, y in p.points])
         lines.append(f'  <polygon points="{points_str}" style="fill:none;stroke:black;stroke-width:0.1" />\n')
 
-        centroid_x, centroid_y = find_centroid(polygon)
-        lines.append(f'  <text text-anchor="middle" dominant-baseline="middle" x="{centroid_x}" y="{centroid_y}" font-family="Verdana" font-size="{font_size}" fill="black">{name}</text>\n')
+        centroid_x, centroid_y = find_centroid(p.points)
+        lines.append(f'  <text text-anchor="middle" dominant-baseline="middle" x="{centroid_x}" y="{centroid_y}" font-family="Verdana" font-size="{font_size}" fill="black">{p.name}</text>\n')
 
     lines.append('</svg>\n')
     return "".join(lines)
 
 
 def main():
+
     dimensions = 2
 
     filename = None
 
     idx = 1
     while (idx < len(sys.argv)):
+        a = sys.argv[idx]
         if (sys.argv[idx] == '-3'):
             dimensions = 3
             idx += 1
+        elif a == "-h" or a == "--help":
+            print("Usage: idf_surface_draw.py [-3] [filename]")
+            print("filename: The name of file with contents like: ")
+            print("3d")
+            print("name1, x1, y1, x2, y2, x3, y3, ...")
+            print("2d")
+            print("name1, x1, y1, x2, y2, ...")
+            sys.exit(0)
         else:
             filename = sys.argv[idx]
             idx += 1
