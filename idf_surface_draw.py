@@ -131,14 +131,14 @@ def main():
             filename = sys.argv[idx]
             idx += 1
 
-    if filename is None and sys.stdin.isatty():
+    if filename is not None:
+        with open(filename, 'r') as file:
+            polygons = read_polygon_file(file, dimensions)
+    elif filename is None and sys.stdin.isatty():
         print("Please specify a filename")
         sys.exit(1)
     elif not sys.stdin.isatty():
         polygons = read_polygon_file(sys.stdin, dimensions)
-    elif filename is not None:
-        with open(filename, 'r') as file:
-            polygons = read_polygon_file(file, dimensions)
     else:
         raise ValueError("Should not be possible")
 
