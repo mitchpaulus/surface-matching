@@ -88,13 +88,11 @@ def find_centroid(polygon: list[tuple[float, float]]):
 
     #  return x, y
 
-def write_svg_file(polygons: list[Polygon]) -> str:
+def write_svg_file(polygons: list[Polygon], font_size: float) -> str:
     lines = []
     viewbox = calculate_viewbox(polygons)
     lines.append('<?xml version="1.0" encoding="UTF-8" ?>\n')
     lines.append(f'<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1080" viewBox="{viewbox}">\n')
-
-    font_size = 1
 
     for p in polygons:
         points_str = ' '.join([f'{x},{y}' for x, y in p.points])
@@ -110,26 +108,37 @@ def write_svg_file(polygons: list[Polygon]) -> str:
 def main():
 
     dimensions = 2
-
     filename = None
+    font_size = 1
 
     idx = 1
     while (idx < len(sys.argv)):
         a = sys.argv[idx]
-        if (sys.argv[idx] == '-3'):
+        idx += 1
+        if (a == '-3'):
             dimensions = 3
-            idx += 1
         elif a == "-h" or a == "--help":
-            print("Usage: idf_surface_draw.py [-3] [filename]")
+            print("Usage: idf_surface_draw.py [--fs FONTSIZE] [-3] [filename]")
             print("filename: The name of file with contents like: ")
             print("3d")
             print("name1, x1, y1, x2, y2, x3, y3, ...")
             print("2d")
             print("name1, x1, y1, x2, y2, ...")
             sys.exit(0)
+        elif a == "--fs":
+            if idx >= len(sys.argv):
+                print("Error: --fs requires a value")
+                sys.exit(1)
+            a = sys.argv[idx]
+            idx += 1
+            try:
+                font_size = float(a)
+            except ValueError:
+                print(f"Error: Invalid font size '{a}'")
+                sys.exit(1)
         else:
             filename = sys.argv[idx]
-            idx += 1
+
 
     if filename is not None:
         with open(filename, 'r') as file:
@@ -146,7 +155,7 @@ def main():
     print(f'Found {len(polygons)} polygons', file=sys.stderr)
     print(polygons, file=sys.stderr)
 
-    output = write_svg_file(polygons)
+    output = write_svg_file(polygons, font_size)
     print(output)
 
 
